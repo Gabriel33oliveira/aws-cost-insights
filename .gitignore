@@ -1,8 +1,19 @@
+# Virtual environments
 .venv/
-__pycache__/
-*.pyc
-.pytest_cache/
 .env
+
+# Python artifacts
+__pycache__/
+*.py[cod]
 *.egg-info/
+.eggs/
 dist/
 build/
+
+# Test and tooling caches
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Generated reports
+output/
