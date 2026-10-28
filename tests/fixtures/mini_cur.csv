@@ -1,0 +1,13 @@
+identity/LineItemId,lineItem/UsageStartDate,lineItem/UsageAccountId,lineItem/ProductCode,product/region,lineItem/UnblendedCost,lineItem/LineItemType,lineItem/UsageType,resourceTags/user:Team
+li-001,2026-01-03T00:00:00Z,012345678901,AmazonEC2,us-east-1,12.50,Usage,BoxUsage:t3.medium,platform
+li-002,2026-01-03T00:00:00Z,012345678901,AmazonS3,us-east-1,1.25,Usage,TimedStorage-ByteHrs,data
+li-003,2026-01-07T00:00:00Z,000987654321,AmazonEC2,eu-west-1,8.00,Usage,EU-BoxUsage:m5.large,
+li-004,2026-01-12T00:00:00Z,000987654321,AmazonRDS,eu-west-1,20.00,Usage,EU-InstanceUsage:db.t3.medium,data
+li-005,2026-01-18T00:00:00Z,012345678901,AmazonRDS,us-east-1,18.75,Usage,InstanceUsage:db.t3.medium,
+li-006,2026-01-25T00:00:00Z,000987654321,AmazonS3,eu-west-1,0.80,Usage,EU-TimedStorage-ByteHrs,platform
+li-007,2026-02-02T00:00:00Z,012345678901,AmazonEC2,us-east-1,13.10,Usage,BoxUsage:t3.medium,platform
+li-008,2026-02-05T00:00:00Z,012345678901,AmazonS3,us-east-1,1.40,Usage,TimedStorage-ByteHrs,
+li-009,2026-02-09T00:00:00Z,000987654321,AmazonEC2,eu-west-1,9.20,Usage,EU-BoxUsage:m5.large,platform
+li-010,2026-02-14T00:00:00Z,000987654321,AmazonRDS,eu-west-1,21.30,Usage,EU-InstanceUsage:db.t3.medium,data
+li-011,2026-02-20T00:00:00Z,012345678901,AmazonRDS,us-east-1,19.05,Usage,InstanceUsage:db.t3.medium,data
+li-012,2026-02-28T00:00:00Z,012345678901,AmazonEC2,us-east-1,-5.00,Credit,BoxUsage:t3.medium,
