@@ -16,3 +16,13 @@ python -m venv .venv
 ```
 
 On macOS or Linux, use `.venv/bin/python` in place of `.venv/Scripts/python`.
+
+## Synthetic data
+
+You don't need an AWS account to try the tool. The `generate` command writes a CUR-style CSV with daily usage for six services, three regions and as many linked accounts as you ask for. The data has a mild monthly growth trend, cheaper weekends, `team` and `env` tags (about 15% of rows are untagged), a few Credit rows and, unless you pass `--no-anomalies`, two injected cost spikes. The same seed always produces the same file.
+
+```bash
+.venv/Scripts/python -m cost_insights generate --out data/samples/my_cur.csv --start 2026-01-01 --months 3 --accounts 3 --seed 42
+```
+
+A small sample (2 months, 2 accounts, seed 42) is committed at `data/samples/sample_cur.csv`.
