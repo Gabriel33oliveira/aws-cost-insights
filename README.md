@@ -26,3 +26,17 @@ You don't need an AWS account to try the tool. The `generate` command writes a C
 ```
 
 A small sample (2 months, 2 accounts, seed 42) is committed at `data/samples/sample_cur.csv`.
+
+## Summary
+
+`summary` reads a CUR CSV file, or every CSV in a directory, and prints the total spend, a breakdown per `--by` dimension, the month-over-month trend, the top cost drivers and the untagged spend.
+
+```bash
+.venv/Scripts/python -m cost_insights summary data/samples/sample_cur.csv --by service --by region --by tag:team --top 5 --tag team --tag env
+```
+
+- `--by` takes `service`, `account_id`, `region` or `tag:<key>`. You can repeat it, and it defaults to `service`. Rows with no value for the tag show up as `(untagged)`.
+- `--top` limits how many rows each breakdown and the top drivers table show (default 10).
+- `--tag` sets the tag keys a row needs to count as tagged. A row missing any of them counts as untagged. You can repeat it, and by default every tag in the data is used.
+
+Top cost drivers are the (service, account, region) combinations whose cost grew the most between the last two months in the data. Tax and Credit rows are left out of every number.
