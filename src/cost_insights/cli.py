@@ -18,6 +18,7 @@ from cost_insights.analysis import (
     untagged_spend,
     validate_dimension,
 )
+from cost_insights.anomalies import ANOMALY_DIMENSIONS, MIN_HISTORY_DAYS, detect_anomalies
 from cost_insights.loader import load_cur
 from cost_insights.synthetic import generate_cur, write_cur_csv
 
@@ -147,6 +148,61 @@ def summary(
         f"[bold]Untagged total:[/bold] {_money(untagged['cost'])} "
         f"({_pct(untagged['share'])} of total spend)"
     )
+
+
+@app.command()
+def anomalies(
+    path: Path = typer.Argument(..., help="CUR CSV file or directory of CSV files."),
+    by: str = typer.Option(
+        "service",
+        "--by",
+        help="Dimension to check: service, account_id, region or total.",
+    ),
+    window: int = typer.Option(
+        14, "--window", min=MIN_HISTORY_DAYS, help="Trailing days used for the baseline."
+    ),
+    threshold: float = typer.Option(
+        3.0, "--threshold", min=0.0, help="Robust z-score above which a day is flagged."
+    ),
+    min_cost: float = typer.Option(
+        10.0, "--min-cost", min=0.0, help="Ignore days cheaper than this (USD)."
+    ),
+) -> None:
+    """Flag days whose cost jumped well above the recent baseline."""
+    if by != "total" and by not in ANOMALY_DIMENSIONS:
+        raise typer.BadParameter(
+            f"Unsupported dimension {by!r}; use one of {', '.join(ANOMALY_DIMENSIONS)} or total",
+            param_hint="--by",
+        )
+
+    df = load_cur(path)
+    found = detect_anomalies(
+        df,
+        by=None if by == "total" else by,
+        window=window,
+        threshold=threshold,
+        min_cost=min_cost,
+    )
+    console = Console()
+    if not found:
+        console.print("No anomalies detected.")
+        return
+
+    table = Table(title=f"Daily cost anomalies by {by}")
+    table.add_column("Date")
+    table.add_column(by)
+    for name in ("Cost", "Baseline", "Change %", "Score"):
+        table.add_column(name, justify="right")
+    for anomaly in found:
+        table.add_row(
+            anomaly.date.isoformat(),
+            anomaly.key,
+            _money(anomaly.cost),
+            _money(anomaly.baseline),
+            _pct(anomaly.pct_change, signed=True),
+            f"{anomaly.score:.1f}",
+        )
+    console.print(table)
 
 
 def _money(value: float, signed: bool = False) -> str:
