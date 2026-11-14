@@ -1,0 +1,84 @@
+{# Every value that comes from the data goes through the `md` filter. #}
+{% macro breakdown(rows, label) %}
+| {{ label | md }} | Cost | Share |
+|---|---:|---:|
+{% for row in rows %}
+| {{ row.key | md }} | {{ row.cost | money }} | {{ row.share | pct }} |
+{% endfor %}
+{% endmacro %}
+# AWS Cost Report
+
+Period: {{ data.period_start.isoformat() }} to {{ data.period_end.isoformat() }}
+
+## Summary
+
+| Metric | Value |
+|---|---:|
+| Total spend | {{ data.total | money }} |
+| Month-over-month change | {{ data.mom_pct_change | pct(signed=True) }} |
+| Untagged share | {{ (data.untagged.share if data.untagged else none) | pct }} |
+| Anomalies | {{ data.anomalies | length }} |
+
+## Spend by Service
+
+{{ breakdown(data.by_service, "Service") }}
+## Spend by Account
+
+{{ breakdown(data.by_account, "Account") }}
+## Spend by Region
+
+{{ breakdown(data.by_region, "Region") }}
+{% for key, rows in data.by_tag.items() %}
+## Spend by Tag: {{ key | md }}
+
+{{ breakdown(rows, key) }}
+{% endfor %}
+## Month-over-Month
+
+| Month | Cost | Change | Change % |
+|---|---:|---:|---:|
+{% for row in data.trend %}
+| {{ row.month | md }} | {{ row.cost | money }} | {{ row.change | money(signed=True) }} | {{ row.pct_change | pct(signed=True) }} |
+{% endfor %}
+
+## Top Cost Drivers
+
+{% if data.top_drivers %}
+Largest cost increases between the last two months.
+
+| Service | Account | Region | Previous | Current | Delta |
+|---|---|---|---:|---:|---:|
+{% for row in data.top_drivers %}
+| {{ row.service | md }} | {{ row.account_id | md }} | {{ row.region | md }} | {{ row.previous_cost | money }} | {{ row.current_cost | money }} | {{ row.delta | money(signed=True) }} |
+{% endfor %}
+{% else %}
+Need at least two months of data.
+{% endif %}
+
+## Untagged Spend
+
+{% if data.untagged %}
+Spend missing any of: {{ data.tag_keys | join(", ") | md }}. Total {{ data.untagged.cost | money }} ({{ data.untagged.share | pct }} of total spend).
+
+{% if data.untagged.by_service %}
+| Service | Cost | Share of untagged |
+|---|---:|---:|
+{% for row in data.untagged.by_service %}
+| {{ row.service | md }} | {{ row.cost | money }} | {{ row.share | pct }} |
+{% endfor %}
+{% endif %}
+{% else %}
+No tag columns in the data.
+{% endif %}
+
+## Anomalies
+
+{% if data.anomalies %}
+| Date | Key | Cost | Baseline | Change % | Score |
+|---|---|---:|---:|---:|---:|
+{% for a in data.anomalies %}
+| {{ a.date.isoformat() }} | {{ a.key | md }} | {{ a.cost | money }} | {{ a.baseline | money }} | {{ a.pct_change | pct(signed=True) }} | {{ "%.1f" | format(a.score) }} |
+{% endfor %}
+{% else %}
+No anomalies detected.
+{% endif %}

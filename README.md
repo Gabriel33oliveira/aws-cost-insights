@@ -55,3 +55,17 @@ For each day, the baseline is the median cost of the previous `--window` days, n
 - `--window` sets the number of trailing days in the baseline (default 14, minimum 7).
 - `--threshold` sets the robust z-score cutoff (default 3.0).
 - `--min-cost` ignores days that cost less than this (default 10).
+
+## Reports
+
+`report` writes the full analysis to `cost-report.md` and/or `cost-report.html` in the output directory and prints their paths.
+
+```bash
+.venv/Scripts/python -m cost_insights report data/samples/sample_cur.csv --format both --out reports --tag team --tag env
+```
+
+- `--format` takes `md`, `html` or `both` (default `both`).
+- `--out` sets the output directory (default `reports`). It's created if it doesn't exist.
+- `--tag` adds a spend breakdown for that tag key and sets the keys a row needs to count as tagged. You can repeat it, and by default every tag in the data is used.
+
+Each report covers the period, total spend, the top 10 rows by service, account, region and each tag, the month-over-month trend, the top cost drivers, untagged spend and the anomalies found with the default `anomalies` settings (by service). The HTML report is a single file with inline CSS and no scripts or external assets, so you can open it offline or attach it to an email.

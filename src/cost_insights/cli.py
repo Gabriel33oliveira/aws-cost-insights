@@ -20,6 +20,7 @@ from cost_insights.analysis import (
 )
 from cost_insights.anomalies import ANOMALY_DIMENSIONS, MIN_HISTORY_DAYS, detect_anomalies
 from cost_insights.loader import load_cur
+from cost_insights.report import build_report_data, render_html, render_markdown
 from cost_insights.synthetic import generate_cur, write_cur_csv
 
 app = typer.Typer(
@@ -203,6 +204,41 @@ def anomalies(
             f"{anomaly.score:.1f}",
         )
     console.print(table)
+
+
+REPORT_FORMATS = ("md", "html", "both")
+
+
+@app.command()
+def report(
+    path: Path = typer.Argument(..., help="CUR CSV file or directory of CSV files."),
+    format: str = typer.Option("both", "--format", help="Report format: md, html or both."),
+    out: Path = typer.Option(Path("reports"), "--out", help="Output directory."),
+    tag: list[str] = typer.Option(
+        None,
+        "--tag",
+        help="Tag key to break spend down by and to require for tagged spend. Repeatable; "
+        "defaults to every tag in the data.",
+    ),
+) -> None:
+    """Write a Markdown and/or self-contained HTML cost report."""
+    if format not in REPORT_FORMATS:
+        raise typer.BadParameter(
+            f"Unsupported format {format!r}; use one of {', '.join(REPORT_FORMATS)}",
+            param_hint="--format",
+        )
+
+    df = load_cur(path)
+    data = build_report_data(df, tag or [], {})
+    out.mkdir(parents=True, exist_ok=True)
+    targets = []
+    if format in ("md", "both"):
+        targets.append((out / "cost-report.md", render_markdown(data)))
+    if format in ("html", "both"):
+        targets.append((out / "cost-report.html", render_html(data)))
+    for target, text in targets:
+        target.write_text(text, encoding="utf-8")
+        typer.echo(f"Wrote {target}")
 
 
 def _money(value: float, signed: bool = False) -> str:

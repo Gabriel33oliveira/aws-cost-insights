@@ -1,0 +1,202 @@
+{% macro breakdown(title, rows, label) %}
+<section>
+  <h2>{{ title }}</h2>
+  <table>
+    <thead><tr><th>{{ label }}</th><th class="num">Cost</th><th class="num">Share</th></tr></thead>
+    <tbody>
+    {% for row in rows %}
+      <tr><td>{{ row.key }}</td><td class="num">{{ row.cost | money }}</td><td class="num">{{ row.share | pct }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endmacro %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS Cost Report {{ data.period_start.isoformat() }} to {{ data.period_end.isoformat() }}</title>
+<style>
+  :root {
+    --ink: #1c2430;
+    --muted: #5f6b7a;
+    --line: #e3e7ec;
+    --surface: #ffffff;
+    --page: #f5f7f9;
+    --accent: #2f6f9f;
+    --accent-soft: #dce9f3;
+    --up: #a63d2f;
+    --down: #2e7d4f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  main { max-width: 1040px; margin: 0 auto; padding: 40px 24px 64px; }
+  header { margin-bottom: 28px; }
+  h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  h2 { font-size: 17px; margin: 0 0 12px; }
+  .period { color: var(--muted); margin: 0; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 32px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; }
+  .card .label { color: var(--muted); font-size: 13px; }
+  .card .value { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  section { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 20px 22px; margin-bottom: 20px; overflow-x: auto; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+  .grid section { margin-bottom: 0; }
+  .grid + section, .grid + .grid { margin-top: 20px; }
+  .note { color: var(--muted); margin: -4px 0 12px; font-size: 14px; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  tbody tr:last-child td { border-bottom: 0; }
+  th:first-child, td:first-child { padding-left: 0; }
+  th:last-child, td:last-child { padding-right: 0; }
+  .num { text-align: right; white-space: nowrap; }
+  .up { color: var(--up); }
+  .down { color: var(--down); }
+  .bar-cell { width: 40%; }
+  .bar { height: 10px; background: var(--accent-soft); border-radius: 5px; overflow: hidden; }
+  .bar span { display: block; height: 100%; background: var(--accent); border-radius: 5px; }
+  .empty { color: var(--muted); margin: 0; }
+  .summary { background: none; border: 0; padding: 0; margin-bottom: 0; }
+  .spaced { margin-top: 20px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>AWS Cost Report</h1>
+    <p class="period">{{ data.period_start.isoformat() }} to {{ data.period_end.isoformat() }}</p>
+  </header>
+
+  <section class="summary" aria-labelledby="summary-heading">
+    <h2 id="summary-heading">Summary</h2>
+    <div class="cards">
+      <div class="card"><div class="label">Total spend</div><div class="value">{{ data.total | money }}</div></div>
+      <div class="card"><div class="label">Month-over-month change</div><div class="value">{{ data.mom_pct_change | pct(signed=True) }}</div></div>
+      <div class="card"><div class="label">Untagged share</div><div class="value">{{ (data.untagged.share if data.untagged else none) | pct }}</div></div>
+      <div class="card"><div class="label">Anomalies</div><div class="value">{{ data.anomalies | length }}</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Spend by Service</h2>
+    <table>
+      <thead><tr><th>Service</th><th class="num">Cost</th><th class="num">Share</th><th class="bar-cell"><span class="sr-only">Share of total</span></th></tr></thead>
+      <tbody>
+      {% for row in data.by_service %}
+        <tr>
+          <td>{{ row.key }}</td>
+          <td class="num">{{ row.cost | money }}</td>
+          <td class="num">{{ row.share | pct }}</td>
+          <td class="bar-cell"><div class="bar"><span style="width: {{ row.share | bar_width }}"></span></div></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <div class="grid">
+    {{ breakdown("Spend by Account", data.by_account, "Account") }}
+    {{ breakdown("Spend by Region", data.by_region, "Region") }}
+  </div>
+  {% if data.by_tag %}
+  <div class="grid">
+    {% for key, rows in data.by_tag.items() %}
+    {{ breakdown("Spend by Tag: " ~ key, rows, key) }}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <section class="spaced">
+    <h2>Month-over-Month</h2>
+    <table>
+      <thead><tr><th>Month</th><th class="num">Cost</th><th class="num">Change</th><th class="num">Change %</th></tr></thead>
+      <tbody>
+      {% for row in data.trend %}
+        {% set cls = "up" if row.change > 0 else ("down" if row.change < 0 else "") %}
+        <tr>
+          <td>{{ row.month }}</td>
+          <td class="num">{{ row.cost | money }}</td>
+          <td class="num {{ cls }}">{{ row.change | money(signed=True) }}</td>
+          <td class="num {{ cls }}">{{ row.pct_change | pct(signed=True) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Top Cost Drivers</h2>
+    {% if data.top_drivers %}
+    <p class="note">Largest cost increases between the last two months.</p>
+    <table>
+      <thead><tr><th>Service</th><th>Account</th><th>Region</th><th class="num">Previous</th><th class="num">Current</th><th class="num">Delta</th></tr></thead>
+      <tbody>
+      {% for row in data.top_drivers %}
+        <tr>
+          <td>{{ row.service }}</td>
+          <td>{{ row.account_id }}</td>
+          <td>{{ row.region }}</td>
+          <td class="num">{{ row.previous_cost | money }}</td>
+          <td class="num">{{ row.current_cost | money }}</td>
+          <td class="num {{ 'up' if row.delta > 0 else ('down' if row.delta < 0 else '') }}">{{ row.delta | money(signed=True) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Need at least two months of data.</p>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>Untagged Spend</h2>
+    {% if data.untagged %}
+    <p class="note">Spend missing any of: {{ data.tag_keys | join(", ") }}. Total {{ data.untagged.cost | money }} ({{ data.untagged.share | pct }} of total spend).</p>
+    {% if data.untagged.by_service %}
+    <table>
+      <thead><tr><th>Service</th><th class="num">Cost</th><th class="num">Share of untagged</th></tr></thead>
+      <tbody>
+      {% for row in data.untagged.by_service %}
+        <tr><td>{{ row.service }}</td><td class="num">{{ row.cost | money }}</td><td class="num">{{ row.share | pct }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+    {% else %}
+    <p class="empty">No tag columns in the data.</p>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>Anomalies</h2>
+    {% if data.anomalies %}
+    <table>
+      <thead><tr><th>Date</th><th>Key</th><th class="num">Cost</th><th class="num">Baseline</th><th class="num">Change %</th><th class="num">Score</th></tr></thead>
+      <tbody>
+      {% for a in data.anomalies %}
+        <tr>
+          <td>{{ a.date.isoformat() }}</td>
+          <td>{{ a.key }}</td>
+          <td class="num">{{ a.cost | money }}</td>
+          <td class="num">{{ a.baseline | money }}</td>
+          <td class="num up">{{ a.pct_change | pct(signed=True) }}</td>
+          <td class="num">{{ "%.1f" | format(a.score) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty">No anomalies detected.</p>
+    {% endif %}
+  </section>
+</main>
+</body>
+</html>
